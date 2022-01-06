@@ -3,6 +3,7 @@ package com.example.authendemo.security;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.example.authendemo.entity.User;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,7 +18,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.stream.Collectors;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 public class UserAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
@@ -47,16 +51,28 @@ public class UserAuthenticationFilter extends UsernamePasswordAuthenticationFilt
     protected void successfulAuthentication(HttpServletRequest request,
                                             HttpServletResponse response,
                                             FilterChain chain,
-                                            Authentication authResult) throws IOException, ServletException {
+                                            Authentication authResult)
+            throws IOException, ServletException {
+
         org.springframework.security.core.userdetails.User user =
                 (org.springframework.security.core.userdetails.User) authResult.getPrincipal();
 
         Algorithm algorithm = Algorithm.HMAC256("secret".getBytes());
+
         String access_token = JWT.create().withSubject(user.getUsername())
-                .withExpiresAt(new Date(System.currentTimeMillis() + 30 * 24 * 3600 * 100))
+                .withExpiresAt(new Date(System.currentTimeMillis() + 10 * 24 * 360 * 100))
                 .withIssuer(request.getRequestURL().toString())
                 .withClaim("roles", user.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()))
                 .sign(algorithm);
-        response.getWriter().print(access_token);
+        String refresh_token = JWT.create().withSubject(user.getUsername())
+                .withExpiresAt(new Date(System.currentTimeMillis() + 30 * 24 * 360 * 100))
+                .withIssuer(request.getRequestURL().toString())
+                .sign(algorithm);
+
+        HashMap<String, String> tokens = new HashMap<>();
+        tokens.put("access_token", access_token);
+        tokens.put("refresh_token", refresh_token);
+        response.setContentType(APPLICATION_JSON_VALUE);
+        new ObjectMapper().writeValue(response.getOutputStream(),tokens);
     }
 }

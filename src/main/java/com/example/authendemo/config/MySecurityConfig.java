@@ -1,7 +1,7 @@
 package com.example.authendemo.config;
 
-import com.example.authendemo.security.MyUserDetailService;
 import com.example.authendemo.security.UserAuthenticationFilter;
+import com.example.authendemo.security.UserAuthorizationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,26 +11,26 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import static com.example.authendemo.constant.URL.*;
 
 @Configuration
 @EnableWebSecurity
 public class MySecurityConfig extends WebSecurityConfigurerAdapter {
 
+
     @Autowired
     private UserDetailsService userDetailsService;
 
     @Autowired
-    private PasswordEncoder bCryptPasswordEncoder;
-
-
-
+    private PasswordEncoder passwordEncoder;
 
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService).passwordEncoder(bCryptPasswordEncoder);
+        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
     }
 
     @Override
@@ -38,14 +38,17 @@ public class MySecurityConfig extends WebSecurityConfigurerAdapter {
         UserAuthenticationFilter userAuthenticationFilter =
                 new UserAuthenticationFilter(authenticationManagerBean());
 
-        userAuthenticationFilter.setFilterProcessesUrl("/api/v1/users/login");
-
+        userAuthenticationFilter.setFilterProcessesUrl(URL_USER_LOGIN);
+//        http.authorizeHttpRequests().antMatchers(USER + "/**").hasAnyAuthority("ROLE_USER");
         http.authorizeHttpRequests()
-                .antMatchers("/api/v1/users/add").permitAll()
+                .antMatchers(URL_USER_SAVE, URL_USER_LOGIN, URL_USER_REFRESH_TOKEN).permitAll()
+                .antMatchers(URL_USER + "/**").hasAnyAuthority("ROLE_USER")
                 .anyRequest().authenticated()
                 .and().csrf().disable();
+
         http.addFilter(userAuthenticationFilter);
-//        http.addFilterBefore(new UserAuthenticationFilter());
+        http.addFilterBefore(new UserAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
+
     }
 
     @Bean
