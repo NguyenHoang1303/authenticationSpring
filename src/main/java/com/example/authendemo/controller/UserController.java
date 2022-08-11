@@ -4,35 +4,53 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.example.authendemo.dto.request.RegisterForm;
+import com.example.authendemo.dto.response.ApiResponse;
+import com.example.authendemo.dto.response.Msg;
 import com.example.authendemo.entity.User;
 import com.example.authendemo.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.ForbiddenException;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
-import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @RestController
-@RequestMapping("api/v1/users")
+@RequestMapping("api/v1/auth")
 public class UserController {
 
     @Autowired
-    UserService userService;
+    private UserService userService;
 
-    @RequestMapping(method = RequestMethod.POST, path = "add")
-    public User save(@RequestBody User user) {
-        return userService.save(user);
+    @RequestMapping(method = RequestMethod.POST, path = "register")
+    public ResponseEntity<ApiResponse> save(@RequestBody RegisterForm form) {
+        throw new BadRequestException("hello");
+//        Msg msg = Msg.builder().timestamp(LocalDateTime.now().toString())
+//                .status(String.valueOf(HttpStatus.OK.value()))
+//                .message(HttpStatus.OK.name())
+//                .build();
+//        return new ResponseEntity<>(
+//                ApiResponse.builder()
+//                        .msg(msg)
+//                        .data(userService.save(form))
+//                        .build(), HttpStatus.OK);
     }
 
+    @PreAuthorize(value = "hasAuthority('ROLE_ADMIN')")
     @RequestMapping(method = RequestMethod.GET, path = "")
     public List<User> getAll() {
+
         return userService.findAll();
     }
 
@@ -52,8 +70,8 @@ public class UserController {
     }
 
     @RequestMapping(method = RequestMethod.GET, path = "token/refresh")
-    public void refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
-                String authorization = request.getHeader(AUTHORIZATION);
+    public void refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        String authorization = request.getHeader(AUTHORIZATION);
         if (authorization != null && authorization.startsWith("Bearer ")) {
             try {
                 String refresh_token = authorization.substring("Bearer ".length());
@@ -72,14 +90,9 @@ public class UserController {
                 tokens.put("access_token", access_token);
                 tokens.put("refresh_token", refresh_token);
                 response.setContentType(APPLICATION_JSON_VALUE);
-                new ObjectMapper().writeValue(response.getOutputStream(),tokens);
+                new ObjectMapper().writeValue(response.getOutputStream(), tokens);
             } catch (Exception e) {
-                response.setHeader("error", e.getMessage());
-                response.setStatus(FORBIDDEN.value());
-                HashMap<String, String> errors = new HashMap<>();
-                errors.put("error_message", e.getMessage());
-                response.setContentType(APPLICATION_JSON_VALUE);
-                new ObjectMapper().writeValue(response.getOutputStream(), errors);
+                throw new ForbiddenException();
             }
 
         } else {

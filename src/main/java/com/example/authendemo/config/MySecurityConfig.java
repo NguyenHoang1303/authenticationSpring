@@ -38,17 +38,14 @@ public class MySecurityConfig extends WebSecurityConfigurerAdapter {
         UserAuthenticationFilter userAuthenticationFilter =
                 new UserAuthenticationFilter(authenticationManagerBean());
 
-        userAuthenticationFilter.setFilterProcessesUrl(URL_USER_LOGIN);
+        userAuthenticationFilter.setFilterProcessesUrl(URL_LOGIN);
 //        http.authorizeHttpRequests().antMatchers(USER + "/**").hasAnyAuthority("ROLE_USER");
-        http.authorizeHttpRequests()
-                .antMatchers(URL_USER_SAVE, URL_USER_LOGIN, URL_USER_REFRESH_TOKEN).permitAll()
-                .antMatchers(URL_USER + "/**").hasAnyAuthority("ROLE_USER")
-                .anyRequest().authenticated()
-                .and().csrf().disable();
+        http.cors().and().csrf().disable().authorizeHttpRequests()
+                .antMatchers(URL_LOGIN, URL_REGISTER).permitAll()
+                .anyRequest().authenticated().and().httpBasic();
 
         http.addFilter(userAuthenticationFilter);
         http.addFilterBefore(new UserAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
-
     }
 
     @Bean

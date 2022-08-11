@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
+import javax.ws.rs.NotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,13 +21,10 @@ public class MyUserDetailService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User existUser = repository.findByUsername(username);
-        if (existUser == null) throw  new UsernameNotFoundException("User not found.");
+        User existUser = repository.findByUsername(username).orElseThrow(NotFoundException::new);
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority(existUser.getRole()));
-        org.springframework.security.core.userdetails.User userSpring
-                = new org.springframework.security.core.userdetails.User(
-                        existUser.getUsername(), existUser.getPassword(),authorities);
-        return userSpring;
+        return new org.springframework.security.core.userdetails.User(
+                existUser.getUsername(), existUser.getPassword(),authorities);
     }
 }
